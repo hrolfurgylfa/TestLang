@@ -1,4 +1,13 @@
+# .NET Builds
 bin/
 obj/
 
 .fake
+
+# Editor folders
+.vscode/
+.vs/
+.idea/
+
+# Other local configuration
+.config/
