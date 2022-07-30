@@ -177,6 +177,17 @@ let rec eval environment expr =
         | VInt int1, VInt int2 -> VInt(int1 * int2)
     | EVar _ -> failwith "Variables not ready"
 
+
+/////////////////
+///   Other   ///
+/////////////////
+
+let lexParseRun =
+    Seq.toList
+    >> simpleLex
+    >> simpleParse
+    >> (eval [])
+
 [<EntryPoint>]
 let main args =
     let toRun =
@@ -185,12 +196,8 @@ let main args =
         | [| line |] -> line
         | _ -> failwith "Too many arguments. Did you forget to put double quotes: \" around the code to run?"
 
-    printfn "%A" toRun
+    printfn "Code to run: \"%A\"" toRun
 
-    let expr = toRun |> Seq.toList |> simpleLex |> simpleParse
-
-    // printExpression 0 expr
-
-    expr |> eval [] |> printfn "%A"
+    lexParseRun toRun |> printfn "Result: %A"
 
     0

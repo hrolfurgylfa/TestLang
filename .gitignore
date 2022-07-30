@@ -9,5 +9,7 @@ obj/
 .vs/
 .idea/
 
+tests/TestResults/
+
 # Other local configuration
 .config/
