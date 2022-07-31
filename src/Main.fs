@@ -10,12 +10,20 @@ type Token =
     | False
     | EOF
 
+module Token =
+    let requiresNextValue token =
+        match token with
+        | Plus -> true
+        | Mul -> true
+        | Minus -> true
+        | _ -> false
+
 type Expression =
     | EVar of string
     | EInt of int
     | EPlus of Expression * Expression
     | EMul of Expression * Expression
-    | EMinus of Expression * Expression
+    | EMinus of Expression
 
 type Value = VInt of int
 
@@ -67,7 +75,24 @@ let rec lex (input: char list) (pos: CodePos) (tokens: FullToken list) : FullTok
     | [] -> List.rev tokens
     | ' ' :: xs -> lex xs (incPos 1 pos) tokens
     | '+' :: xs -> lex xs (incPos 1 pos) (({ token = Plus; pos = pos }) :: tokens)
-    | '-' :: xs -> lex xs (incPos 1 pos) (({ token = Minus; pos = pos }) :: tokens)
+    | '-' :: xs ->
+        // Add a plus infront of all - operators if they are between two
+        // values, otherwise if there is already an operator just add the
+        // subtraction.
+        let shouldBeValue =
+            List.tryHead tokens
+            |> Option.map ((fun x -> x.token) >> Token.requiresNextValue)
+            |> Option.defaultValue true
+
+        let newTokens =
+            if shouldBeValue then
+                { token = Minus; pos = pos } :: tokens
+            else
+                { token = Minus; pos = pos }
+                :: { token = Plus; pos = pos } :: tokens
+
+        lex xs (incPos 1 pos) newTokens
+
     | '*' :: xs -> lex xs (incPos 1 pos) (({ token = Mul; pos = pos }) :: tokens)
     | 't' :: 'r' :: 'u' :: 'e' :: xs -> lex xs (incPos 4 pos) (({ token = True; pos = pos }) :: tokens)
     | 'f' :: 'a' :: 'l' :: 's' :: 'e' :: xs -> lex xs (incPos 5 pos) (({ token = False; pos = pos }) :: tokens)
@@ -96,9 +121,6 @@ and parseSum (tokens: FullToken list) : Expression * FullToken list =
     | { token = Plus } :: tokens ->
         let expr2, tokens = parseSum tokens
         EPlus(expr1, expr2), tokens
-    | { token = Minus } :: tokens ->
-        let expr2, tokens = parseSum tokens
-        EMinus(expr1, expr2), tokens
     | tokens -> expr1, tokens
 
 and parseMul (tokens: FullToken list) : Expression * FullToken list =
@@ -116,7 +138,11 @@ and parseEnd (tokens: FullToken list) : Expression * FullToken list =
     | { token = Int num } :: xs -> EInt num, xs
     | { token = True } :: xs -> EInt 1, xs
     | { token = False } :: xs -> EInt 0, xs
-    | { token = unknown } :: _ -> failwith $"Expected a value like int, variable or float but got {unknown}"
+    | { token = Minus } :: xs ->
+        let expr, tokens = parseEnd xs
+        EMinus expr, tokens
+    | { token = unknown; pos = pos } :: _ ->
+        failwith $"Expected a value like int, variable or float but got {unknown} at pos {pos}"
     | [] ->
         failwith
             "Tokens list was empty when trying to find a value. This is an error in the internals of the interpreter."
@@ -133,21 +159,23 @@ let nameOfExpression expr =
     | EVar _ -> "EVar"
     | EInt _ -> "EInt"
     | EPlus (_, _) -> "EPlus"
-    | EMinus (_, _) -> "EMinus"
+    | EMinus _ -> "EMinus"
     | EMul (_, _) -> "EMul"
 
 let rec printExpression indent expr =
     let indentStr = String.replicate indent " "
 
     match expr with
+    | EMinus expr1 ->
+        printExpression (indent + 4) expr1
+        printfn "%s%s" indentStr (nameOfExpression expr)
     | EPlus (expr1, expr2)
-    | EMinus (expr1, expr2)
     | EMul (expr1, expr2) ->
         printExpression (indent + 4) expr1
-        printf "%s%A\n" indentStr (nameOfExpression expr)
+        printfn "%s%s" indentStr (nameOfExpression expr)
         printExpression (indent + 4) expr2
-    | EInt int -> printf "%s%d\n" indentStr int
-    | EVar var -> printf "%s%s\n" indentStr var
+    | EInt int -> printfn "%s%d" indentStr int
+    | EVar var -> printfn "%s%s" indentStr var
 
 
 /////////////////////
@@ -163,12 +191,11 @@ let rec eval environment expr =
 
         match val1, val2 with
         | VInt int1, VInt int2 -> VInt(int1 + int2)
-    | EMinus (expr1, expr2) ->
+    | EMinus expr1 ->
         let val1 = eval environment expr1
-        let val2 = eval environment expr2
 
-        match val1, val2 with
-        | VInt int1, VInt int2 -> VInt(int1 - int2)
+        match val1 with
+        | VInt int1 -> VInt(-int1)
     | EMul (expr1, expr2) ->
         let val1 = eval environment expr1
         let val2 = eval environment expr2
@@ -182,11 +209,8 @@ let rec eval environment expr =
 ///   Other   ///
 /////////////////
 
-let lexParseRun =
-    Seq.toList
-    >> simpleLex
-    >> simpleParse
-    >> (eval [])
+let lexParse = Seq.toList >> simpleLex >> simpleParse
+let lexParseRun = lexParse >> (eval [])
 
 [<EntryPoint>]
 let main args =
@@ -196,7 +220,15 @@ let main args =
         | [| line |] -> line
         | _ -> failwith "Too many arguments. Did you forget to put double quotes: \" around the code to run?"
 
-    printfn "Code to run: \"%A\"" toRun
+    printfn "Code to run: \"%s\"" toRun
+
+    printfn "Lexed: %A" (toRun |> Seq.toList |> simpleLex)
+
+    let expr = lexParse toRun
+
+    printfn "AST:"
+    printExpression 0 expr
+    printfn ""
 
     lexParseRun toRun |> printfn "Result: %A"
 
