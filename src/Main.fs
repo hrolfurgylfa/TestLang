@@ -6,6 +6,7 @@ type Token =
     | Plus
     | Minus
     | Mul
+    | Div
     | True
     | False
     | EOF
@@ -16,6 +17,7 @@ module Token =
         | Plus -> true
         | Mul -> true
         | Minus -> true
+        | Div -> true
         | _ -> false
 
 type Expression =
@@ -23,6 +25,7 @@ type Expression =
     | EInt of int
     | EPlus of Expression * Expression
     | EMul of Expression * Expression
+    | EDiv of Expression * Expression
     | EMinus of Expression
 
 type Value = VInt of int
@@ -94,6 +97,7 @@ let rec lex (input: char list) (pos: CodePos) (tokens: FullToken list) : FullTok
         lex xs (incPos 1 pos) newTokens
 
     | '*' :: xs -> lex xs (incPos 1 pos) (({ token = Mul; pos = pos }) :: tokens)
+    | '/' :: xs -> lex xs (incPos 1 pos) (({ token = Div; pos = pos }) :: tokens)
     | 't' :: 'r' :: 'u' :: 'e' :: xs -> lex xs (incPos 4 pos) (({ token = True; pos = pos }) :: tokens)
     | 'f' :: 'a' :: 'l' :: 's' :: 'e' :: xs -> lex xs (incPos 5 pos) (({ token = False; pos = pos }) :: tokens)
     | c :: xs when isDigit c ->
@@ -123,13 +127,30 @@ and parseSum (tokens: FullToken list) : Expression * FullToken list =
         EPlus(expr1, expr2), tokens
     | tokens -> expr1, tokens
 
+and switchMulDiv expr =
+    // Switch the current thing and expr2 if expr2 belongs to parseMul to
+    // get the correct order of operations
+    match expr with
+    | EMul (expr1, expr2) ->
+        match expr2 with
+        | EDiv (expr3, expr4) -> EDiv(EMul(expr1, expr3), expr4)
+        | _ -> expr
+    | EDiv (expr1, expr2) ->
+        match expr2 with
+        | EMul (expr3, expr4) -> EMul(EDiv(expr1, expr3), expr4)
+        | _ -> expr
+    | _ -> expr
+
 and parseMul (tokens: FullToken list) : Expression * FullToken list =
     let expr1, tokens = parseEnd tokens
 
     match tokens with
     | { token = Mul } :: tokens ->
         let expr2, tokens = parseMul tokens
-        EMul(expr1, expr2), tokens
+        switchMulDiv (EMul(expr1, expr2)), tokens
+    | { token = Div } :: tokens ->
+        let expr2, tokens = parseMul tokens
+        switchMulDiv (EDiv(expr1, expr2)), tokens
     | tokens -> expr1, tokens
 
 and parseEnd (tokens: FullToken list) : Expression * FullToken list =
@@ -161,6 +182,7 @@ let nameOfExpression expr =
     | EPlus (_, _) -> "EPlus"
     | EMinus _ -> "EMinus"
     | EMul (_, _) -> "EMul"
+    | EDiv (_, _) -> "EDiv"
 
 let rec printExpression indent expr =
     let indentStr = String.replicate indent " "
@@ -170,6 +192,7 @@ let rec printExpression indent expr =
         printExpression (indent + 4) expr1
         printfn "%s%s" indentStr (nameOfExpression expr)
     | EPlus (expr1, expr2)
+    | EDiv (expr1, expr2)
     | EMul (expr1, expr2) ->
         printExpression (indent + 4) expr1
         printfn "%s%s" indentStr (nameOfExpression expr)
@@ -202,6 +225,12 @@ let rec eval environment expr =
 
         match val1, val2 with
         | VInt int1, VInt int2 -> VInt(int1 * int2)
+    | EDiv (expr1, expr2) ->
+        let val1 = eval environment expr1
+        let val2 = eval environment expr2
+
+        match val1, val2 with
+        | VInt int1, VInt int2 -> VInt(int1 / int2)
     | EVar _ -> failwith "Variables not ready"
 
 
