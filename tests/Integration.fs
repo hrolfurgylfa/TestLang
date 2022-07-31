@@ -28,6 +28,7 @@ let divide () =
     assertParse (VFloat 3.5) "7 / 2"
     assertParse (VFloat 4.0) "8 / 2"
     assertParse (VFloat 17.5) "15 / 6 * 7"
+    assertParse (VFloat 113.75) "15 / 6 * 7 / 3 / 4 * 78"
 
 [<Fact>]
 let booleans () =

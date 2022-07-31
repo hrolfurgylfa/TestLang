@@ -125,7 +125,7 @@ let simpleLex input =
 let rec parseExpression (tokens: FullToken list) : Expression * FullToken list = parseSum tokens
 
 and parseSum (tokens: FullToken list) : Expression * FullToken list =
-    let expr1, tokens = parseMul tokens
+    let expr1, tokens = parseMul None tokens
 
     match tokens with
     | { token = Plus } :: tokens ->
@@ -133,33 +133,27 @@ and parseSum (tokens: FullToken list) : Expression * FullToken list =
         EPlus(expr1, expr2), tokens
     | tokens -> expr1, tokens
 
-and switchMulDiv expr =
-    // Switch the current thing and expr2 if expr2 belongs to parseMul to
-    // get the correct order of operations
-    match expr with
-    | EMul (expr1, expr2) ->
-        match expr2 with
-        | EDiv (expr3, expr4) -> EDiv(EMul(expr1, expr3), expr4)
-        | EMul (expr3, expr4) -> EMul(EMul(expr1, expr3), expr4)
-        | _ -> expr
-    | EDiv (expr1, expr2) ->
-        match expr2 with
-        | EMul (expr3, expr4) -> EMul(EDiv(expr1, expr3), expr4)
-        | EDiv (expr3, expr4) -> EDiv(EDiv(expr1, expr3), expr4)
-        | _ -> expr
-    | _ -> expr
-
-and parseMul (tokens: FullToken list) : Expression * FullToken list =
-    let expr1, tokens = parseEnd tokens
+and parseMul (expr1: Expression option) (tokens: FullToken list) : Expression * FullToken list =
+    let expr1, tokens =
+        match expr1 with
+        | Some expr -> expr, tokens
+        | None -> parseUnary tokens
 
     match tokens with
-    | { token = Mul } :: tokens ->
-        let expr2, tokens = parseMul tokens
-        switchMulDiv (EMul(expr1, expr2)), tokens
-    | { token = Div } :: tokens ->
-        let expr2, tokens = parseMul tokens
-        switchMulDiv (EDiv(expr1, expr2)), tokens
+    | { token = Mul } :: xs ->
+        let expr2, newTokens = parseUnary xs
+        parseMul (Some(EMul(expr1, expr2))) newTokens
+    | { token = Div } :: xs ->
+        let expr2, newTokens = parseUnary xs
+        parseMul (Some(EDiv(expr1, expr2))) newTokens
     | tokens -> expr1, tokens
+
+and parseUnary tokens =
+    match tokens with
+    | { token = Minus } :: xs ->
+        let expr, newTokens = parseUnary xs
+        EMinus expr, newTokens
+    | tokens -> parseEnd tokens
 
 and parseEnd (tokens: FullToken list) : Expression * FullToken list =
     match tokens with
@@ -167,9 +161,6 @@ and parseEnd (tokens: FullToken list) : Expression * FullToken list =
     | { token = Int num } :: xs -> EInt num, xs
     | { token = True } :: xs -> EInt 1, xs
     | { token = False } :: xs -> EInt 0, xs
-    | { token = Minus } :: xs ->
-        let expr, tokens = parseEnd xs
-        EMinus expr, tokens
     | { token = unknown; pos = pos } :: _ ->
         failwith $"Expected a value like int, variable or float but got {unknown} at pos {pos}"
     | [] ->
@@ -247,8 +238,8 @@ let rec eval environment expr =
         match val1, val2 with
         | VInt int1, VInt int2 -> VFloat(float int1 / float int2)
         | VFloat flt1, VFloat flt2 -> VFloat(flt1 / flt2)
-        | VInt int, VFloat flt
-        | VFloat flt, VInt int -> VFloat(float int / flt)
+        | VInt int, VFloat flt -> VFloat(float int / flt)
+        | VFloat flt, VInt int -> VFloat(flt / float int)
     | EVar _ -> failwith "Variables not ready"
 
 
