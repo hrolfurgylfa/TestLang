@@ -64,16 +64,22 @@ let rec lexNumber (input: char list) (pos: CodePos) (currDigitsReverse: char lis
 
         (xs, pos, Int num)
 
-let rec lexDigitOrLetter (input: char list) (pos: CodePos) (currLettersReverse: char list) =
+let rec lexIdentifier (input: char list) (pos: CodePos) (currLettersReverse: char list) =
     match input with
-    | c :: xs when isLetterOrDigit c -> lexDigitOrLetter xs (incPos 1 pos) (c :: currLettersReverse)
+    | c :: xs when isLetterOrDigit c -> lexIdentifier xs (incPos 1 pos) (c :: currLettersReverse)
     | xs ->
         let str =
             List.rev currLettersReverse
             |> List.map string
             |> List.reduce (+)
 
-        (xs, pos, Identifier str)
+        let token =
+            match str with
+            | "true" -> True
+            | "false" -> False
+            | _ -> Identifier str
+
+        (xs, pos, token)
 
 let rec lex (input: char list) (pos: CodePos) (tokens: FullToken list) : FullToken list =
     match input with
@@ -100,13 +106,11 @@ let rec lex (input: char list) (pos: CodePos) (tokens: FullToken list) : FullTok
 
     | '*' :: xs -> lex xs (incPos 1 pos) (({ token = Mul; pos = pos }) :: tokens)
     | '/' :: xs -> lex xs (incPos 1 pos) (({ token = Div; pos = pos }) :: tokens)
-    | 't' :: 'r' :: 'u' :: 'e' :: xs -> lex xs (incPos 4 pos) (({ token = True; pos = pos }) :: tokens)
-    | 'f' :: 'a' :: 'l' :: 's' :: 'e' :: xs -> lex xs (incPos 5 pos) (({ token = False; pos = pos }) :: tokens)
     | c :: xs when isDigit c ->
         let (newInput, newPos, token) = lexNumber xs (incPos 1 pos) [ c ]
         lex newInput newPos ({ token = token; pos = pos } :: tokens)
     | c :: xs when isLetter c ->
-        let (newInput, newPos, token) = lexDigitOrLetter xs (incPos 1 pos) [ c ]
+        let (newInput, newPos, token) = lexIdentifier xs (incPos 1 pos) [ c ]
         lex newInput newPos ({ token = token; pos = pos } :: tokens)
     | c :: _ -> failwith $"Unknown character {c} at position {pos}"
 

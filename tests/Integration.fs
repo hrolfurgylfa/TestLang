@@ -28,3 +28,8 @@ let divide () =
     assertParse (VFloat 3.5) "7 / 2"
     assertParse (VFloat 4.0) "8 / 2"
     assertParse (VFloat 17.5) "15 / 6 * 7"
+
+[<Fact>]
+let booleans () =
+    assertParse (VInt 2) "true + true + false"
+    assertParse (VInt 1) "true + false - true + true"
