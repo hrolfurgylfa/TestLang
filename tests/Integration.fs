@@ -24,8 +24,7 @@ let subtract () =
 
 [<Fact>]
 let divide () =
-    assertParse (VInt 3) "6 / 2"
-    assertParse (VInt 3) "7 / 2"
-    assertParse (VInt 4) "8 / 2"
-
-    assertParse (VInt 14) "15 / 6 * 7"
+    assertParse (VFloat 3.0) "6 / 2"
+    assertParse (VFloat 3.5) "7 / 2"
+    assertParse (VFloat 4.0) "8 / 2"
+    assertParse (VFloat 17.5) "15 / 6 * 7"

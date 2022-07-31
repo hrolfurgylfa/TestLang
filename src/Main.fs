@@ -28,7 +28,9 @@ type Expression =
     | EDiv of Expression * Expression
     | EMinus of Expression
 
-type Value = VInt of int
+type Value =
+    | VInt of int
+    | VFloat of float
 
 type CodePos = { lineNo: int; startPos: int }
 
@@ -134,10 +136,12 @@ and switchMulDiv expr =
     | EMul (expr1, expr2) ->
         match expr2 with
         | EDiv (expr3, expr4) -> EDiv(EMul(expr1, expr3), expr4)
+        | EMul (expr3, expr4) -> EMul(EMul(expr1, expr3), expr4)
         | _ -> expr
     | EDiv (expr1, expr2) ->
         match expr2 with
         | EMul (expr3, expr4) -> EMul(EDiv(expr1, expr3), expr4)
+        | EDiv (expr3, expr4) -> EDiv(EDiv(expr1, expr3), expr4)
         | _ -> expr
     | _ -> expr
 
@@ -214,23 +218,33 @@ let rec eval environment expr =
 
         match val1, val2 with
         | VInt int1, VInt int2 -> VInt(int1 + int2)
+        | VFloat flt1, VFloat flt2 -> VFloat(flt1 + flt2)
+        | VInt int, VFloat flt
+        | VFloat flt, VInt int -> VFloat(float int + flt)
     | EMinus expr1 ->
         let val1 = eval environment expr1
 
         match val1 with
         | VInt int1 -> VInt(-int1)
+        | VFloat int1 -> VFloat(-int1)
     | EMul (expr1, expr2) ->
         let val1 = eval environment expr1
         let val2 = eval environment expr2
 
         match val1, val2 with
         | VInt int1, VInt int2 -> VInt(int1 * int2)
+        | VFloat flt1, VFloat flt2 -> VFloat(flt1 * flt2)
+        | VInt int, VFloat flt
+        | VFloat flt, VInt int -> VFloat(float int * flt)
     | EDiv (expr1, expr2) ->
         let val1 = eval environment expr1
         let val2 = eval environment expr2
 
         match val1, val2 with
-        | VInt int1, VInt int2 -> VInt(int1 / int2)
+        | VInt int1, VInt int2 -> VFloat(float int1 / float int2)
+        | VFloat flt1, VFloat flt2 -> VFloat(flt1 / flt2)
+        | VInt int, VFloat flt
+        | VFloat flt, VInt int -> VFloat(float int / flt)
     | EVar _ -> failwith "Variables not ready"
 
 
