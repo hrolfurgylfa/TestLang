@@ -31,6 +31,13 @@ let divide () =
     assertParse (VFloat 113.75) "15 / 6 * 7 / 3 / 4 * 78"
 
 [<Fact>]
+let brackets () =
+    assertParse (VInt 102) "51 + 3 * 17"
+    assertParse (VInt 918) "(51 + 3) * 17"
+    assertParse (VFloat 93.5) "51 / 2 + 4 * 17"
+    assertParse (VFloat 144.5) "51 / (2 + 4) * 17"
+
+[<Fact>]
 let booleans () =
     assertParse (VInt 2) "true + true + false"
     assertParse (VInt 1) "true + false - true + true"

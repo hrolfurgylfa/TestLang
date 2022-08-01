@@ -9,6 +9,8 @@ type Token =
     | Div
     | True
     | False
+    | LBracket
+    | RBracket
     | EOF
 
 module Token =
@@ -106,6 +108,8 @@ let rec lex (input: char list) (pos: CodePos) (tokens: FullToken list) : FullTok
 
     | '*' :: xs -> lex xs (incPos 1 pos) (({ token = Mul; pos = pos }) :: tokens)
     | '/' :: xs -> lex xs (incPos 1 pos) (({ token = Div; pos = pos }) :: tokens)
+    | '(' :: xs -> lex xs (incPos 1 pos) (({ token = LBracket; pos = pos }) :: tokens)
+    | ')' :: xs -> lex xs (incPos 1 pos) (({ token = RBracket; pos = pos }) :: tokens)
     | c :: xs when isDigit c ->
         let (newInput, newPos, token) = lexNumber xs (incPos 1 pos) [ c ]
         lex newInput newPos ({ token = token; pos = pos } :: tokens)
@@ -161,6 +165,14 @@ and parseEnd (tokens: FullToken list) : Expression * FullToken list =
     | { token = Int num } :: xs -> EInt num, xs
     | { token = True } :: xs -> EInt 1, xs
     | { token = False } :: xs -> EInt 0, xs
+    | { token = LBracket } :: xs ->
+        let expr, newTokens = parseSum xs
+
+        match newTokens with
+        | { token = RBracket } :: xs2 -> expr, xs2
+        | { token = unknown; pos = pos } :: _ ->
+            failwith $"Expected a closing bracket but instead found {unknown} at pos {pos}"
+        | [] -> failwith $"Expected a closing bracket but instead the file ended."
     | { token = unknown; pos = pos } :: _ ->
         failwith $"Expected a value like int, variable or float but got {unknown} at pos {pos}"
     | [] ->
