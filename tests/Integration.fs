@@ -2,7 +2,8 @@ module Integration
 
 open Xunit
 
-open TestLang
+open TestLang.Main
+open TestLang.Evaluator
 
 let assertParse result code = Assert.Equal(result, lexParseRun code)
 

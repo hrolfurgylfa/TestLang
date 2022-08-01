@@ -5,6 +5,9 @@
     <RootNamespace>TestLang</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Lexer.fs" />
+    <Compile Include="Parser.fs" />
+    <Compile Include="Evaluator.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
 </Project>
