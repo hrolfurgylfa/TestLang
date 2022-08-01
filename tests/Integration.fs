@@ -41,3 +41,9 @@ let brackets () =
 let booleans () =
     assertParse (VInt 2) "true + true + false"
     assertParse (VInt 1) "true + false - true + true"
+
+[<Fact>]
+let variables () =
+    assertParse (VFloat 6.28) "pi * 2"
+    assertParse (VInt 61025937) "veryRandomConstant"
+    assertParse (VInt 122051880) "((veryRandomConstant) + 3) * 2"

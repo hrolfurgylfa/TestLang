@@ -216,6 +216,13 @@ let rec printExpression indent expr =
 ///   Evaluator   ///
 /////////////////////
 
+let getEnvVar (var: string) env : Value =
+    let res = Map.tryFind var env
+
+    match res with
+    | Some x -> x
+    | None -> failwith $"Variable \"{var}\" could not be found, are you sure it was spelled correctly?"
+
 let rec eval environment expr =
     match expr with
     | EInt int -> VInt int
@@ -252,15 +259,20 @@ let rec eval environment expr =
         | VFloat flt1, VFloat flt2 -> VFloat(flt1 / flt2)
         | VInt int, VFloat flt -> VFloat(float int / flt)
         | VFloat flt, VInt int -> VFloat(flt / float int)
-    | EVar _ -> failwith "Variables not ready"
+    | EVar name -> getEnvVar name environment
 
 
 /////////////////
 ///   Other   ///
 /////////////////
+let defaultEnv =
+    Map.empty
+    |> Map.add "pi" (VFloat 3.14)
+    |> Map.add "version" (VInt 0)
+    |> Map.add "veryRandomConstant" (VInt 61025937)
 
 let lexParse = Seq.toList >> simpleLex >> simpleParse
-let lexParseRun = lexParse >> (eval [])
+let lexParseRun = lexParse >> (eval defaultEnv)
 
 [<EntryPoint>]
 let main args =
@@ -280,6 +292,6 @@ let main args =
     printExpression 0 expr
     printfn ""
 
-    lexParseRun toRun |> printfn "Result: %A"
+    expr |> (eval defaultEnv) |> printfn "Result: %A"
 
     0
