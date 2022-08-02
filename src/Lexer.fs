@@ -11,7 +11,6 @@ type Token =
     | False
     | LBracket
     | RBracket
-    | EOF
 
 module Token =
     let requiresNextValue token =
