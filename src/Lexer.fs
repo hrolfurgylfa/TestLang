@@ -70,7 +70,15 @@ let rec lexIdentifier (input: char list) (pos: CodePos) (currLettersReverse: cha
 let rec lex (input: char list) (pos: CodePos) (tokens: FullToken list) : FullToken list =
     match input with
     | [] -> List.rev tokens
-    | ' ' :: xs -> lex xs (incPos 1 pos) tokens
+    | ' ' :: xs
+    | '\t' :: xs -> lex xs (incPos 1 pos) tokens
+    | '\r' :: xs -> lex xs pos tokens
+    | '\n' :: xs ->
+        let newPos =
+            { startPos = 1
+              lineNo = pos.lineNo + 1 }
+
+        lex xs newPos tokens
     | '+' :: xs -> lex xs (incPos 1 pos) (({ token = Plus; pos = pos }) :: tokens)
     | '-' :: xs ->
         // Add a plus infront of all - operators if they are between two
@@ -103,4 +111,4 @@ let rec lex (input: char list) (pos: CodePos) (tokens: FullToken list) : FullTok
     | c :: _ -> failwith $"Unknown character {c} at position {pos}"
 
 let simpleLex input =
-    lex input { lineNo = 0; startPos = 0 } []
+    lex input { lineNo = 1; startPos = 1 } []

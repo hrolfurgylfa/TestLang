@@ -3,6 +3,7 @@ module Integration
 open Xunit
 
 open TestLang.Main
+open TestLang.Lexer
 open TestLang.Evaluator
 
 let assertParse result code = Assert.Equal(result, lexParseRun code)
@@ -48,3 +49,14 @@ let variables () =
     assertParse (VFloat 6.28) "pi * 2"
     assertParse (VInt 61025937) "veryRandomConstant"
     assertParse (VInt 122051880) "((veryRandomConstant) + 3) * 2"
+
+let getFstTokenPos str =
+    str
+    |> Seq.toList
+    |> simpleLex
+    |> (fun xs -> xs.[0].pos)
+
+[<Fact>]
+let lexPosInfo () =
+    Assert.Equal({ lineNo = 1; startPos = 1 }, getFstTokenPos "true")
+    Assert.Equal({ lineNo = 4; startPos = 7 }, getFstTokenPos "   \n  \n \n      true  ")
