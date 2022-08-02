@@ -6,6 +6,11 @@ type Value =
     | VInt of int
     | VFloat of float
 
+let toStr value =
+    match value with
+    | VInt int -> int.ToString()
+    | VFloat flt -> flt.ToString()
+
 let getEnvVar (var: string) env : Value =
     let res = Map.tryFind var env
 
@@ -50,3 +55,14 @@ let rec eval environment expr =
         | VInt int, VFloat flt -> VFloat(float int / flt)
         | VFloat flt, VInt int -> VFloat(flt / float int)
     | EVar name -> getEnvVar name environment
+
+let rec evalStmts env stmts =
+    match stmts with
+    | [] -> ()
+    | SPrint expr :: xs ->
+        let result = eval env expr
+        printfn "%s" (toStr result)
+        evalStmts env xs
+    | SExpr expr :: xs ->
+        eval env expr |> ignore
+        evalStmts env xs

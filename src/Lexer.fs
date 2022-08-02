@@ -11,6 +11,7 @@ type Token =
     | False
     | LBracket
     | RBracket
+    | Print
 
 module Token =
     let requiresNextValue token =
@@ -61,6 +62,7 @@ let rec lexIdentifier (input: char list) (pos: CodePos) (currLettersReverse: cha
             match str with
             | "true" -> True
             | "false" -> False
+            | "print" -> Print
             | _ -> Identifier str
 
         (xs, pos, token)

@@ -8,11 +8,9 @@ let defaultEnv =
     |> Map.add "version" (VInt 0)
     |> Map.add "veryRandomConstant" (VInt 61025937)
 
-let lexParse =
-    Seq.toList
-    >> Lexer.simpleLex
-    >> Parser.simpleParse
-
+let lexStr = Seq.toList >> Lexer.simpleLex
+let lexParse = lexStr >> Parser.simpleParse
+let lexParseStmt = lexStr >> Parser.simpleParseStmts
 let lexParseRun = lexParse >> (eval defaultEnv)
 
 [<EntryPoint>]
@@ -24,15 +22,17 @@ let main args =
         | _ -> failwith "Too many arguments. Did you forget to put double quotes: \" around the code to run?"
 
     printfn "Code to run: \"%s\"" toRun
-
-    printfn "Lexed: %A" (toRun |> Seq.toList |> Lexer.simpleLex)
-
-    let expr = lexParse toRun
-
-    printfn "AST:"
-    Parser.printExpression 0 expr
     printfn ""
 
-    expr |> (eval defaultEnv) |> printfn "Result: %A"
+    printfn "Lexed:\n%A" (toRun |> Seq.toList |> Lexer.simpleLex)
+
+    let stmts = lexParseStmt toRun
+
+    printfn "AST:"
+    Parser.printStatements stmts
+    printfn ""
+
+    printfn "Your program:"
+    stmts |> (evalStmts defaultEnv)
 
     0

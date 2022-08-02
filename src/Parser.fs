@@ -10,7 +10,20 @@ type Expression =
     | EDiv of Expression * Expression
     | EMinus of Expression
 
-let rec parseExpression (tokens: FullToken list) : Expression * FullToken list = parseSum tokens
+type Statement =
+    | SPrint of Expression
+    | SExpr of Expression
+
+let rec parseStatement (tokens: FullToken list) : Statement * FullToken list =
+    match tokens with
+    | { token = Print } :: xs ->
+        let expr, xs2 = parseExpression xs
+        SPrint expr, xs2
+    | xs ->
+        let expr, xs2 = parseExpression xs
+        SExpr expr, xs2
+
+and parseExpression (tokens: FullToken list) : Expression * FullToken list = parseSum tokens
 
 and parseSum (tokens: FullToken list) : Expression * FullToken list =
     let expr1, tokens = parseMul None tokens
@@ -70,6 +83,16 @@ let simpleParse tokens =
     | [] -> expr
     | _ -> failwith $"Still have tokens after expression, these should have all been used: {tokens}"
 
+let simpleParseStmts tokens =
+    let rec parseStmts stmts tokens =
+        let stmt, tokens = parseStatement tokens
+
+        match tokens with
+        | [] -> List.rev (stmt :: stmts)
+        | xs -> parseStmts (stmt :: stmts) xs
+
+    parseStmts [] tokens
+
 let nameOfExpression expr =
     match expr with
     | EVar _ -> "EVar"
@@ -79,18 +102,29 @@ let nameOfExpression expr =
     | EMul (_, _) -> "EMul"
     | EDiv (_, _) -> "EDiv"
 
-let rec printExpression indent expr =
-    let indentStr = String.replicate indent " "
-
+let rec expressionToStr expr =
     match expr with
     | EMinus expr1 ->
-        printExpression (indent + 4) expr1
-        printfn "%s%s" indentStr (nameOfExpression expr)
+        let expr1Str = expressionToStr expr1
+        sprintf "(%s %s)" (nameOfExpression expr) expr1Str
     | EPlus (expr1, expr2)
     | EDiv (expr1, expr2)
     | EMul (expr1, expr2) ->
-        printExpression (indent + 4) expr1
-        printfn "%s%s" indentStr (nameOfExpression expr)
-        printExpression (indent + 4) expr2
-    | EInt int -> printfn "%s%d" indentStr int
-    | EVar var -> printfn "%s%s" indentStr var
+        let expr1Str = expressionToStr expr1
+        let expr2Str = expressionToStr expr2
+        sprintf "(%s %s %s)" (nameOfExpression expr) expr1Str expr2Str
+    | EInt int -> sprintf "(int %d)" int
+    | EVar var -> sprintf "(getVar %s)" var
+
+let rec printExpression expr = printfn "%s" (expressionToStr expr)
+
+let statementToStr stmt =
+    match stmt with
+    | SPrint expr -> sprintf "Print: %s" (expressionToStr expr)
+    | SExpr expr -> sprintf "Expression: %s" (expressionToStr expr)
+
+let printStatements stmts =
+    stmts
+    |> List.map statementToStr
+    |> String.concat "\n"
+    |> printfn "%s"
