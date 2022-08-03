@@ -13,12 +13,26 @@ type Expression =
 type Statement =
     | SPrint of Expression
     | SExpr of Expression
+    | SLet of Expression * Expression
 
 let rec parseStatement (tokens: FullToken list) : Statement * FullToken list =
     match tokens with
     | { token = Print } :: xs ->
         let expr, xs2 = parseExpression xs
         SPrint expr, xs2
+    | { token = Let; pos = letPos } :: xs ->
+        let toExpr, xs2 = parseExpression xs
+
+        match xs2 with
+        | { token = Assign } :: xs3 ->
+            let fromExpr, xs4 = parseExpression xs3
+            SLet(toExpr, fromExpr), xs4
+        | { pos = pos } :: _ ->
+            failwith
+                $"Expected a value to be assigned to the let biding here {pos} but I didn't find any equals sign, did you forget to assign a value to this variable?"
+        | [] ->
+            failwith
+                $"Expected to find an equals sign with the let binding at {letPos} but instead the program ended, did you forget to assign a value to your variable?"
     | xs ->
         let expr, xs2 = parseExpression xs
         SExpr expr, xs2
@@ -122,6 +136,7 @@ let statementToStr stmt =
     match stmt with
     | SPrint expr -> sprintf "Print: %s" (expressionToStr expr)
     | SExpr expr -> sprintf "Expression: %s" (expressionToStr expr)
+    | SLet (toExpr, fromExpr) -> sprintf "Assigning %s to %s" (expressionToStr fromExpr) (expressionToStr toExpr)
 
 let printStatements stmts =
     stmts

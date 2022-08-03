@@ -12,6 +12,8 @@ type Token =
     | LBracket
     | RBracket
     | Print
+    | Let
+    | Assign
 
 module Token =
     let requiresNextValue token =
@@ -63,6 +65,7 @@ let rec lexIdentifier (input: char list) (pos: CodePos) (currLettersReverse: cha
             | "true" -> True
             | "false" -> False
             | "print" -> Print
+            | "let" -> Let
             | _ -> Identifier str
 
         (xs, pos, token)
@@ -102,6 +105,7 @@ let rec lex (input: char list) (pos: CodePos) (tokens: FullToken list) : FullTok
     | '/' :: xs -> lex xs (incPos 1 pos) (({ token = Div; pos = pos }) :: tokens)
     | '(' :: xs -> lex xs (incPos 1 pos) (({ token = LBracket; pos = pos }) :: tokens)
     | ')' :: xs -> lex xs (incPos 1 pos) (({ token = RBracket; pos = pos }) :: tokens)
+    | '=' :: xs -> lex xs (incPos 1 pos) (({ token = Assign; pos = pos }) :: tokens)
     | c :: xs when isDigit c ->
         let (newInput, newPos, token) = lexNumber xs (incPos 1 pos) [ c ]
         lex newInput newPos ({ token = token; pos = pos } :: tokens)
