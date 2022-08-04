@@ -11,7 +11,8 @@ let defaultEnv =
 let lexStr = Seq.toList >> Lexer.simpleLex
 let lexParse = lexStr >> Parser.simpleParse
 let lexParseStmt = lexStr >> Parser.simpleParseStmts
-let lexParseRun = lexParse >> (eval defaultEnv)
+let lexParseRunStmt = lexParseStmt >> evalStmts defaultEnv
+let lexParseRun = lexParse >> eval defaultEnv
 
 [<EntryPoint>]
 let main args =
@@ -33,6 +34,6 @@ let main args =
     printfn ""
 
     printfn "Your program:"
-    stmts |> (evalStmts defaultEnv)
+    stmts |> (evalStmts defaultEnv) |> ignore
 
     0

@@ -8,6 +8,9 @@ open TestLang.Evaluator
 
 let assertParse result code = Assert.Equal(result, lexParseRun code)
 
+let assertParseStmt result code =
+    Assert.Equal(result, lexParseRunStmt code)
+
 [<Fact>]
 let addAndMul () =
     assertParse (VInt 4) "1 + 3"
@@ -60,3 +63,14 @@ let getFstTokenPos str =
 let lexPosInfo () =
     Assert.Equal({ lineNo = 1; startPos = 1 }, getFstTokenPos "true")
     Assert.Equal({ lineNo = 4; startPos = 7 }, getFstTokenPos "   \n  \n \n      true  ")
+
+[<Fact>]
+let stmtReturn () =
+    assertParseStmt VVoid "print 3"
+    assertParseStmt VVoid "let a = 3"
+    assertParseStmt (VInt 3) "3"
+
+[<Fact>]
+let createVariables () =
+    assertParseStmt (VInt 3) "let a = 1\nlet b = 2\na + b"
+    assertParseStmt (VFloat 80.5) "let a = 5 * (32 - 1) / 2 + 1\nlet b = 2\na + b"

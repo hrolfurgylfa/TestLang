@@ -13,7 +13,7 @@ type Expression =
 type Statement =
     | SPrint of Expression
     | SExpr of Expression
-    | SLet of Expression * Expression
+    | SLet of string * Expression
 
 let rec parseStatement (tokens: FullToken list) : Statement * FullToken list =
     match tokens with
@@ -21,12 +21,19 @@ let rec parseStatement (tokens: FullToken list) : Statement * FullToken list =
         let expr, xs2 = parseExpression xs
         SPrint expr, xs2
     | { token = Let; pos = letPos } :: xs ->
-        let toExpr, xs2 = parseExpression xs
+        // Get the variable name
+        let iden, xs2 =
+            match xs with
+            | { token = Identifier name } :: xs2 -> name, xs2
+            | { token = unknown } :: _ ->
+                failwith $"Expecting a variable name after let here {letPos} but instead found {unknown}"
+            | [] -> failwith $"Expecting a variable name after let here {letPos} but instead the program ended"
 
+        // Get the variable value and return the statement
         match xs2 with
         | { token = Assign } :: xs3 ->
             let fromExpr, xs4 = parseExpression xs3
-            SLet(toExpr, fromExpr), xs4
+            SLet(iden, fromExpr), xs4
         | { pos = pos } :: _ ->
             failwith
                 $"Expected a value to be assigned to the let biding here {pos} but I didn't find any equals sign, did you forget to assign a value to this variable?"
@@ -136,7 +143,7 @@ let statementToStr stmt =
     match stmt with
     | SPrint expr -> sprintf "Print: %s" (expressionToStr expr)
     | SExpr expr -> sprintf "Expression: %s" (expressionToStr expr)
-    | SLet (toExpr, fromExpr) -> sprintf "Assigning %s to %s" (expressionToStr fromExpr) (expressionToStr toExpr)
+    | SLet (iden, fromExpr) -> sprintf "Assigning %s to the variable \"%s\"" (expressionToStr fromExpr) iden
 
 let printStatements stmts =
     stmts
