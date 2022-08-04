@@ -13,3 +13,6 @@ tests/TestResults/
 
 # Other local configuration
 .config/
+
+# Scrach folder for tstl programs
+/scratch/

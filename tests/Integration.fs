@@ -6,10 +6,11 @@ open TestLang.Main
 open TestLang.Lexer
 open TestLang.Evaluator
 
-let assertParse result code = Assert.Equal(result, lexParseRun code)
+let assertParse result code =
+    Assert.Equal(result, code |> Seq.toList |> lexParseRun)
 
 let assertParseStmt result code =
-    Assert.Equal(result, lexParseRunStmt code)
+    Assert.Equal(result, code |> Seq.toList |> lexParseRunStmt)
 
 [<Fact>]
 let addAndMul () =
